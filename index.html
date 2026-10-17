@@ -1,0 +1,1430 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>准点凶手 · 玩法验证 Demo</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#080b12;--panel:#101724;--panel2:#0c121d;--ink:#e8e4d9;--dim:#8b93a5;
+  --faint:#5d6577;--line:#1e2938;--brass:#b08a5a;--red:#c0503f;--blue:#7d9dbb;--green:#93a87c;
+  --serif:"Songti SC","Noto Serif SC","Source Han Serif SC",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.7;
+  background-image:
+    radial-gradient(900px 500px at 75% -10%, rgba(125,157,187,.10), transparent 60%),
+    radial-gradient(700px 480px at 0% 110%, rgba(176,138,90,.08), transparent 60%);
+  background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:48px 48px}
+#app{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:18px 20px 40px}
+button{font-family:var(--sans)}
+#hud{display:flex;align-items:center;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px;position:sticky;top:0;z-index:20;background:rgba(8,11,18,.94);backdrop-filter:blur(10px)}
+.clock{font-family:var(--serif);font-size:30px;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.place{font-size:13px;color:var(--brass);letter-spacing:.16em}
+.stats{font-size:11.5px;color:var(--dim);letter-spacing:.08em;display:flex;gap:14px;flex-wrap:wrap}
+.stats b{color:var(--ink);font-weight:500}
+.hud-btns{margin-left:auto;display:flex;gap:8px}
+.btn{border:1px solid var(--line);background:transparent;color:var(--dim);border-radius:999px;
+  padding:8px 16px;font-size:12px;letter-spacing:.08em;cursor:pointer;transition:.2s}
+.btn:hover{color:var(--ink);border-color:#33405a}
+.btn.primary{background:var(--brass);border-color:var(--brass);color:#17120c;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.btn.small{padding:5px 11px;font-size:11px}
+.btn.tiny{padding:3px 9px;font-size:10.5px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;margin-top:18px}
+.scene{min-height:520px}
+.scene-head{padding:8px 2px 16px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.kicker{font-size:10.5px;letter-spacing:.34em;color:var(--faint);margin:0 0 8px}
+.scene h1{font-family:var(--serif);font-weight:400;font-size:30px;letter-spacing:.08em;margin:0 0 8px}
+.scene .desc{margin:0;color:var(--dim);font-size:13px}
+.scene-sub{margin:12px 0 0;color:var(--faint);font-size:11.5px;letter-spacing:.06em}
+.points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0 6px}
+.point{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:14px;text-align:left;color:var(--ink)}
+.point .pt-name{display:block;font-family:var(--serif);font-size:15px;letter-spacing:.05em}
+.point .pt-desc{display:block;margin-top:4px;font-size:11.5px;color:var(--dim);line-height:1.6}
+.point .pt-act{margin-top:10px}
+.point.searched{opacity:.58}
+.point .pt-result{margin-top:8px;font-size:11.5px;color:var(--brass);line-height:1.6}
+.carriage-row{display:flex;gap:8px;align-items:center;margin:6px 0 2px;flex-wrap:wrap}
+.carriage-row .lbl{font-size:10.5px;letter-spacing:.2em;color:var(--faint)}
+.car-btn{border:1px solid var(--line);background:var(--panel2);color:var(--dim);border-radius:999px;
+  padding:5px 13px;font-size:11.5px;cursor:pointer}
+.car-btn.on{border-color:var(--brass);color:var(--ink);background:rgba(176,138,90,.12)}
+.car-btn:disabled{opacity:.4;cursor:not-allowed}
+.npcs{margin-top:20px;display:grid;gap:10px}
+.npc{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:12px 14px}
+.npc .who{font-size:13px;letter-spacing:.04em}
+.npc .who span{color:var(--faint);font-size:11px;margin-left:6px;letter-spacing:.08em}
+.npc .line{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.6}
+.npc .acts{margin-left:auto;display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:220px}
+.badge{display:inline-block;font-size:9.5px;letter-spacing:.12em;color:var(--brass);border:1px solid rgba(176,138,90,.45);
+  border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.side{display:grid;gap:14px;align-content:start}
+.panel{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:14px}
+.panel h3{margin:0 0 10px;font-size:10.5px;letter-spacing:.28em;color:var(--faint);font-weight:500}
+.dep{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+.dep:last-child{border-bottom:0}
+.dep .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dep .t{font-family:var(--serif);font-size:14px;width:46px;font-variant-numeric:tabular-nums}
+.dep .to{font-size:11.5px;color:var(--dim);flex:1;min-width:0}
+.dep .to b{display:block;color:var(--ink);font-weight:500;font-size:12px}
+.dep .in{font-size:10px;color:var(--faint);width:40px;text-align:right}
+.dep .go{flex:none}
+.map{display:block;width:100%;height:auto}
+.log{display:grid;gap:6px;max-height:210px;overflow:auto;font-size:11.5px;color:var(--dim)}
+.log p{margin:0;line-height:1.55}
+.log p b{color:var(--brass);font-weight:500}
+.foot{margin-top:22px;font-size:10.5px;color:var(--faint);letter-spacing:.12em;display:flex;gap:14px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgba(4,6,10,.76);backdrop-filter:blur(4px)}
+.modal[hidden]{display:none}
+.modal-box{position:relative;width:min(620px,100%);max-height:86vh;overflow:auto;background:var(--panel);border:1px solid #2a3a52;
+  border-radius:14px;padding:26px 26px 20px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.modal-box h2{font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:.06em;margin:0 0 6px}
+.m-kicker{font-size:10px;letter-spacing:.3em;color:var(--faint);margin:0 0 8px}
+.modal-box p{font-size:12.5px;color:var(--dim);line-height:1.85}
+.modal-box .lore{font-size:11.5px;color:var(--brass);line-height:1.8;border-left:2px solid rgba(176,138,90,.35);padding-left:9px}
+.choices{display:grid;gap:8px;margin-top:16px}
+.choice{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;
+  padding:12px 14px;text-align:left;cursor:pointer;font-size:12.5px;transition:.18s}
+.choice:hover{border-color:var(--brass);background:#151f2f}
+.choice small{display:block;color:var(--faint);font-size:10.5px;margin-top:3px}
+.evpick{display:grid;gap:6px;margin:12px 0}
+.evpick label{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--dim);cursor:pointer}
+.evpick input{margin-top:4px}
+.chance{font-family:var(--serif);font-size:28px;color:var(--brass);letter-spacing:.04em}
+.close-x{position:absolute;top:12px;right:14px;border:0;background:none;color:var(--faint);font-size:22px;cursor:pointer;line-height:1}
+.cb-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0 16px}
+.cb-cell{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--panel2)}
+.cb-cell .k{font-size:9.5px;letter-spacing:.24em;color:var(--faint);display:block;margin-bottom:4px}
+.cb-cell .v{font-size:12px;color:var(--faint);line-height:1.6}
+.cb-cell.filled .v{color:var(--ink)}
+.cb-cell.lock{border-color:rgba(192,80,63,.4)}
+.ev-list{display:grid;gap:6px;margin-top:8px}
+.ev-list div{font-size:11.5px;color:var(--dim);border-bottom:1px dashed rgba(255,255,255,.06);padding-bottom:5px}
+.ev-list b{color:var(--ink);font-weight:500;margin-right:8px}
+.toast{position:fixed;left:50%;bottom:42px;transform:translateX(-50%);z-index:80;
+  background:#161f2e;border:1px solid #2b3a52;color:var(--ink);padding:9px 18px;border-radius:999px;
+  font-size:12px;letter-spacing:.06em;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+.where{font-size:11px;color:var(--faint);letter-spacing:.08em;border-left:1px solid var(--line);padding-left:12px}
+.scene{position:relative;border:1px solid var(--line);border-radius:14px;padding:16px 18px;overflow:hidden;background:var(--panel2)}
+.scene.is-station{background:linear-gradient(180deg,rgba(125,157,187,.09),transparent 42%),repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 1px,transparent 1px 92px),var(--panel2)}
+.scene.is-train{background:linear-gradient(180deg,rgba(176,138,90,.08),transparent 45%),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 44px),var(--panel2);border-color:#2a3a52}
+.loc-stamp{position:absolute;right:16px;top:8px;font-family:var(--serif);font-size:42px;letter-spacing:.18em;color:rgba(232,228,217,.055);pointer-events:none;user-select:none}
+.scene.is-train .loc-stamp{color:rgba(176,138,90,.12)}
+.transit{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11.5px;letter-spacing:.08em;padding:8px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:14px;background:rgba(176,138,90,.07);color:var(--brass)}
+.transit.board{border-color:rgba(125,157,187,.42);color:var(--blue);background:rgba(125,157,187,.07)}
+.transit .tt{font-family:var(--serif);font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0 6px}
+.pack-counts{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:11px;color:var(--dim);margin-bottom:10px}
+.pack-counts b{color:var(--ink);font-weight:500}
+.pack-open{width:100%}
+.log-row{display:grid;grid-template-columns:38px 52px minmax(0,1fr);gap:6px;align-items:baseline;font-size:10.5px;line-height:1.5;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+.log-row:last-child{border-bottom:0}
+.log-row .lt{font-family:var(--serif);color:var(--brass);font-variant-numeric:tabular-nums}
+.log-row .lk{color:var(--faint);font-size:9.5px;letter-spacing:.06em}
+.log-row .lx{color:var(--dim);overflow-wrap:anywhere}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}
+.tab{border:1px solid var(--line);background:var(--panel2);color:var(--dim);border-radius:999px;padding:5px 12px;font-size:11px;cursor:pointer}
+.tab.on{border-color:var(--brass);color:var(--ink);background:rgba(176,138,90,.12)}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.inv-card{border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:10px;cursor:pointer;text-align:left;color:var(--ink);transition:.18s}
+.inv-card:hover{border-color:#33405a}
+.inv-card.on{border-color:var(--brass);background:rgba(176,138,90,.10)}
+.inv-card .ic{font-size:16px;display:block;margin-bottom:4px}
+.inv-card .nm{display:block;font-size:11.5px;line-height:1.45}
+.inv-card .mt{display:block;font-size:9.5px;color:var(--faint);margin-top:3px;letter-spacing:.06em}
+.inv-card.lock{border-color:rgba(192,80,63,.42)}
+.inv-empty{font-size:11.5px;color:var(--faint);padding:8px 0}
+.inv-detail{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;min-height:100px}
+.inv-detail h3{font-family:var(--serif);font-weight:400;font-size:16px;letter-spacing:.04em;margin:0 0 4px}
+.inv-detail .meta{font-size:9.5px;letter-spacing:.18em;color:var(--brass);margin-bottom:8px}
+.inv-detail .desc{font-size:12px;color:var(--dim);line-height:1.8;margin:0 0 6px}
+.inv-detail .lore{font-size:11.5px;color:var(--brass);line-height:1.8;margin:6px 0 0;border-left:2px solid rgba(176,138,90,.35);padding-left:9px}
+.inv-detail .use{font-size:11px;color:var(--faint);line-height:1.7;margin:6px 0 0}
+.board-form{display:grid;gap:9px}
+.board-row{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;align-items:center}
+.board-row label{font-size:10px;letter-spacing:.12em;color:var(--faint)}
+.board-row select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:6px;padding:6px 8px;font-size:11.5px}
+.board-status{font-size:11.5px;color:var(--dim);line-height:1.8;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.wait-hint{margin:4px 0 0;font-size:10.5px;color:var(--faint)}
+.question{border-left:2px solid var(--brass);padding:8px 12px;margin:10px 0;font-family:var(--serif);font-size:15px;line-height:1.7;color:var(--ink);background:rgba(176,138,90,.06)}
+.hint-box{border-top:1px solid var(--line);margin-top:14px;padding-top:10px;font-size:11px;color:var(--dim);line-height:1.7}
+.hint-box b{display:block;font-size:9.5px;letter-spacing:.2em;color:var(--faint);margin-bottom:4px}
+.inv-card.new{animation:cardPulse 1.6s ease-out;border-color:var(--brass)}
+.inv-card.dup{border-color:var(--red);box-shadow:0 0 0 1px rgba(192,80,63,.35)}
+@keyframes cardPulse{0%{background:rgba(176,138,90,.30)}100%{background:var(--panel2)}}
+.toast b{display:block;font-weight:500}
+.toast small{display:block;color:var(--faint);font-size:10.5px;margin-top:2px;line-height:1.5}
+@media (max-width:1100px){.points{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){
+  main{grid-template-columns:1fr}
+  #hud{gap:10px}
+  .clock{font-size:24px}
+  .hud-btns{margin-left:0}
+  .points{grid-template-columns:1fr}
+  .scene{min-height:0}
+  .npc{flex-wrap:wrap}
+  .npc .acts{margin-left:0;max-width:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="clock" id="clock">21:00</div>
+    <div class="place" id="place">中央站</div>
+    <div class="where" id="where"></div>
+    <div class="stats" id="stats"></div>
+    <div class="hud-btns">
+      <button class="btn" id="invBtn" type="button">线索夹</button>
+      <button class="btn" id="restartBtn" type="button">重开</button>
+    </div>
+  </header>
+  <main>
+    <section class="scene" id="scene"></section>
+    <aside class="side">
+      <section class="panel" id="departures"></section>
+      <section class="panel" id="mapPanel"></section>
+      <section class="panel" id="packPanel"></section>
+      <section class="panel" id="logPanel"></section>
+    </aside>
+  </main>
+  <footer class="foot" id="foot"></footer>
+</div>
+<div class="modal" id="modal" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+/* 准点凶手 —— 最小玩法验证 Demo */
+(function () {
+  'use strict';
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  /* ---------- rng ---------- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+  function shuffle(rng, arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function fmt(t) {
+    const total = 21 * 60 + Math.max(0, Math.min(NIGHT_END, t));
+    const h = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
+
+  /* ---------- world ---------- */
+  const NIGHT_END = 150;
+  const STATIONS = {
+    north: { name: '北站', x: 50, y: 42 },
+    clock: { name: '钟楼', x: 140, y: 42 },
+    central: { name: '中央', x: 230, y: 125 },
+    south: { name: '南站', x: 340, y: 222 },
+    west: { name: '西站', x: 50, y: 125 },
+    old: { name: '旧市', x: 230, y: 222 },
+    east: { name: '东站', x: 340, y: 125 }
+  };
+  const LINES = {
+    A: { name: '苍线', color: '#7d9dbb', stations: ['north', 'clock', 'central', 'south'], offset: 0 },
+    B: { name: '赤线', color: '#c07a6a', stations: ['west', 'central', 'old', 'east'], offset: 3 },
+    C: { name: '夜线', color: '#93a87c', stations: ['north', 'west', 'central', 'east', 'south'], offset: 6 }
+  };
+  const STATION_DESC = {
+    north: '风从站台尽头灌进来，广播声听不清。',
+    clock: '钟楼的指针停在一分钟前，没人去修。',
+    central: '三条线在这里交汇，人最多，也最容易被看见。',
+    south: '末班车在这里折返。站外是海。',
+    west: '咖啡摊的灯亮着，椅子是湿的。',
+    old: '旧市的站台很短，列车只开一半的门。',
+    east: '东站新修过，白得像一间诊所。'
+  };
+  const CULPRITS = [
+    { key: 'gray', tag: '灰线', traits: ['穿灰色呢外套', '左手戴黑手套', '提一只旧皮箱'], desc: '穿灰色呢外套，左手戴黑手套，提一只旧皮箱。', near: '穿灰色夹克，右手戴皮手套，提一只新皮箱。' },
+    { key: 'red', tag: '煤灰', traits: ['围深红围巾', '右手提藤箱', '鞋跟沾着煤灰'], desc: '围深红围巾，右手提藤箱，鞋跟沾着煤灰。', near: '围深红围巾，左手提藤箱，鞋跟很干净。' },
+    { key: 'black', tag: '报纸', traits: ['撑黑伞', '左眉有一道旧疤', '怀里抱着牛皮纸袋'], desc: '撑黑伞，左眉有一道旧疤，怀里抱着牛皮纸袋。', near: '撑黑伞，右眉有一道新伤，怀里抱着纸袋。' },
+    { key: 'white', tag: '红漆', traits: ['戴白手套', '袖口沾着红漆', '提一只铜扣皮箱'], desc: '戴白手套，袖口沾着红漆，提一只铜扣皮箱。', near: '戴白手套，袖口很干净，提一只旧皮箱。' }
+  ];
+  const CASES = [
+    {
+      victim: '检票员 老顾',
+      why: '他在找一张被老顾扣下的出生证明。',
+      lore: '老顾从不提这张证明。你只记得他说过，他有一个“没上过学的弟弟”。',
+      lock: { name: '盖着「已注销」的出生证明', desc: '姓名栏被墨水涂掉了，背面盖着老顾的检票章。', lore: '证明的纸角还留着老顾的检票章。章是反着盖的，像有人匆忙按下去。' }
+    },
+    {
+      victim: '夜班司机 老秦',
+      why: '他在找妹妹被老秦拿走的那张照片。',
+      lore: '老秦值最后一班时，总把一张照片压在仪表盘下面。没人见过照片上的人。',
+      lock: { name: '烧掉半张的照片', desc: '只剩一只眼睛和半截站台，背面写着老秦的班次。', lore: '照片背面的班次是老秦出事那一晚。烧痕从边缘往里，像有人想烧掉整张脸。' }
+    },
+    {
+      victim: '清洁工 阿德',
+      why: '他在找阿德吞掉的那笔赔偿金。',
+      lore: '阿德死前一直在说“钱在表里”。大家都以为他在说胡话。',
+      lock: { name: '停在 22:17 的怀表', desc: '表盖内侧刻着阿德的名字，表针停在事故发生的时刻。', lore: '表盖内侧刻着阿德的名字，表针停在 22:17。表壳里塞着一张卷得很紧的收据。' }
+    },
+    {
+      victim: '报刊亭 陈姨',
+      why: '他在找陈姨扣下的最后一封信。',
+      lore: '陈姨的报刊亭有个不上锁的抽屉。她总说，信要等对的人来取。',
+      lock: { name: '带血的厨房刀', desc: '刀刃上有暗红色痕迹，刀柄缠着一段灰线。', lore: '刀柄缠着一段灰线。陈姨最后一晚，手里也攥着同样的线。' }
+    }
+  ];
+  const EVIDENCE = [
+    { id: 'e1', name: '灰线头', tag: '灰线', desc: '从座椅缝里捡到的灰色线头，和灰外套袖口的线是同一种。', lore: '老顾的检票章背面，也缠着一小段同样的灰线。', use: '可向关心「灰线」的人出示。' },
+    { id: 'e2', name: '旧票根', tag: '票根', desc: '一张被撕掉一半的票根，时间模糊，背面有铅笔写的站名。', lore: '票根上的站名被撕掉了，只剩一个“北”字。', use: '可向查票的人，或关心「票根」的人出示。' },
+    { id: 'e3', name: '铜纽扣', tag: '制服', desc: '制服上的铜纽扣，背面刻着一串编号。', lore: '编号和站务员的制服对不上，像是从旧制服上拆下来的。', use: '可向站务员，或关心「制服」的人出示。' },
+    { id: 'e4', name: '红漆片', tag: '红漆', desc: '一小片红漆，边缘还带着木屑，像从旧皮箱的角上蹭下来的。', lore: '红漆的弧度，和旧皮箱的铜角对得上。', use: '可向关心「红漆」的人出示。' },
+    { id: 'e5', name: '煤灰样本', tag: '煤灰', desc: '用纸包着的一点煤灰，凑近能闻到机油味。', lore: '煤灰里混着检票口的打孔屑。', use: '可向关心「煤灰」的人出示。' },
+    { id: 'e6', name: '半张报纸', tag: '报纸', desc: '日期是昨天，边角有一行铅笔字：“别回头”。', lore: '报纸的日期是事故第二天，头版被人撕掉了。', use: '可向报刊亭，或关心「报纸」的人出示。' }
+  ];
+  const TAG_QUESTIONS = {
+    '灰线': '你见过灰色的线头吗？',
+    '票根': '你手里有被撕过的票根吗？',
+    '制服': '你见过制服上的铜纽扣吗？',
+    '红漆': '你见过旧皮箱角上掉下来的红漆吗？',
+    '煤灰': '你身上沾过煤灰吗？',
+    '报纸': '你有昨天的报纸吗？'
+  };
+  const STATION_NPCS = {
+    north: { name: '售票员 老周', role: '售票员', persona: '他总把零钱按年份排好。', line: '今晚的票卖得怪。' },
+    clock: { name: '站务员 小林', role: '站务员', persona: '他说话时一直看钟。', line: '钟楼的钟慢了一分钟。' },
+    central: { name: '乘务员 阿岚', role: '乘务员', keyNpc: true, persona: '她剪票很慢，像在等谁。', line: '我见过很多人，也忘了很多。' },
+    south: { name: '报刊亭 陈姨', role: '报刊亭老板', persona: '她知道每一班车的常客。', line: '晚报上没写的事，往往更有意思。' },
+    west: { name: '咖啡摊 老赵', role: '咖啡摊主', persona: '他记得每个客人加几块糖。', line: '等车的人，最容易被看见。' },
+    old: { name: '售票员 小满', role: '售票员', persona: '她还在用旧式打孔器。', line: '旧市的车，总是很挤。' },
+    east: { name: '站务员 阿凯', role: '站务员', keyNpc: true, persona: '他只在末班车前出现。', line: '末班车前，什么都有可能。' }
+  };
+  const FLAVOR_NPCS = [
+    { name: '通勤者', desc: '每天坐同一班车，怀里抱着一只旧公文包。', line: '我认得这班车上的每一张脸。', line2: '那个提旧皮箱的人，总在最后一节车厢。' },
+    { name: '学生', desc: '校服袖口磨破了，手里攥着一张票。', line: '我在等一个不会来的人。', line2: '他说他会回来，可车票已经过期了。' },
+    { name: '老人', desc: '帽檐压得很低，脚边放着一只藤箱。', line: '车快来了，别急。', line2: '末班车之前，什么都能赶上。' },
+    { name: '卖艺人', desc: '手风琴上贴着一张褪色的站台票。', line: '听完这首，我就下车。', line2: '这首曲子，是给一个不再来的人拉的。' }
+  ];
+  const PLATFORM = [
+    { name: '长椅', desc: '一张被坐皱的报纸。' },
+    { name: '垃圾桶', desc: '几只揉皱的糖纸。' },
+    { name: '公告栏', desc: '几张过期的施工通知。' }
+  ];
+  const INDOOR = [
+    { name: '失物招领', desc: '架子上有一只没人领的箱子。' },
+    { name: '售票机', desc: '出票口卡着一张旧票根。' },
+    { name: '寄存柜', desc: '有一格没有关严。' },
+    { name: '报刊亭', desc: '今天的晚报堆得很高。' }
+  ];
+  const EXTRA = [
+    { name: '天桥', desc: '风从楼梯口灌下来，墙角有一小片被踩碎的纸。' },
+    { name: '洗手间', desc: '镜子下面有一道没擦干净的水痕。' },
+    { name: '检票口', desc: '打孔器搁在台面上，旁边是一叠废票。' },
+    { name: '储物间', desc: '门没锁，里面堆着几只落灰的箱子。' },
+    { name: '站台尽头', desc: '铁轨那边很黑，只有一盏灯。' },
+    { name: '自动贩卖机', desc: '机器卡着一罐没掉下来的咖啡。' }
+  ];
+
+  let S = null;
+  let seed = 0;
+
+  /* ---------- services ---------- */
+  function randomService(rng, station, minT, maxT) {
+    const opts = [];
+    for (const lid of Object.keys(LINES)) {
+      const line = LINES[lid];
+      const idx = line.stations.indexOf(station);
+      if (idx < 0) continue;
+      for (const dir of [1, -1]) {
+        if (dir === 1 && idx >= line.stations.length - 1) continue;
+        if (dir === -1 && idx <= 0) continue;
+        const off = (dir === 1 ? idx : line.stations.length - 1 - idx) * 6;
+        for (let dep = line.offset; dep <= 140; dep += 10) {
+          const arr = dep + off;
+          if (arr >= minT && arr <= maxT) {
+            opts.push({ lid, dir, dep, arr, key: lid + '-' + dir + '-' + dep, next: line.stations[idx + dir] });
+          }
+        }
+      }
+    }
+    return opts.length ? opts[Math.floor(rng() * opts.length)] : null;
+  }
+
+  function generateLegs(rng) {
+    const legs = [];
+    let from = pick(rng, Object.keys(STATIONS));
+    let minT = 0;
+    for (let i = 0; i < 3; i++) {
+      const lo = i === 2 ? Math.max(minT, 128) : minT;
+      const hi = i === 0 ? 65 : (i === 1 ? 115 : 138);
+      let svc = randomService(rng, from, lo, hi);
+      if (!svc) svc = randomService(rng, from, minT, hi);
+      if (!svc) svc = randomService(rng, from, minT, 138);
+      if (!svc) {
+        svc = { lid: 'A', dir: 1, dep: 0, arr: 0, key: 'fallback-' + i, next: 'central' };
+      }
+      legs.push({ lid: svc.lid, dir: svc.dir, dep: svc.dep, arr: svc.arr, key: svc.key, from: from, to: svc.next });
+      from = svc.next;
+      minT = svc.arr + 12;
+    }
+    return legs;
+  }
+
+  function departuresAt(station, fromT) {
+    const opts = {};
+    for (const lid of Object.keys(LINES)) {
+      const line = LINES[lid];
+      const idx = line.stations.indexOf(station);
+      if (idx < 0) continue;
+      for (const dir of [1, -1]) {
+        if (dir === 1 && idx >= line.stations.length - 1) continue;
+        if (dir === -1 && idx <= 0) continue;
+        const off = (dir === 1 ? idx : line.stations.length - 1 - idx) * 6;
+        for (let dep = line.offset; dep <= 140; dep += 10) {
+          const arr = dep + off;
+          if (arr >= fromT - 2 && arr <= NIGHT_END) {
+            const key = lid + '-' + dir + '-' + dep;
+            opts[key] = { lid, dir, dep, arr, key, next: line.stations[idx + dir] };
+          }
+        }
+      }
+    }
+    return Object.values(opts).sort((a, b) => a.arr - b.arr).slice(0, 4);
+  }
+
+  /* ---------- generation ---------- */
+  function generateFragments(rng, culprit, kase, legs) {
+    const fromName = STATIONS[legs[2].from].name;
+    const toName = STATIONS[legs[2].to].name;
+    const lineName = LINES[legs[2].lid].name;
+    const otherCulprit = pick(rng, CULPRITS.filter(c => c.key !== culprit.key));
+    const otherCase = pick(rng, CASES.filter(c => c !== kase));
+    const otherLine = pick(rng, Object.values(LINES).filter(l => l.name !== lineName)) || LINES.A;
+    const otherStation = pick(rng, Object.keys(STATIONS).filter(s => s !== legs[2].from));
+    const otherTo = otherLine.stations[otherLine.stations.length - 1];
+    const otherTime = fmt(Math.max(0, legs[2].arr - 20));
+    return [
+      { id: 'c-who1', slot: 'who', part: 1, correct: true, text: culprit.traits[0] + '。' },
+      { id: 'c-who2', slot: 'who', part: 2, correct: true, text: culprit.traits[1] + '，' + culprit.traits[2] + '。' },
+      { id: 'c-when1', slot: 'when', part: 1, correct: true, text: fmt(legs[2].arr) + '，有人在' + fromName + '看见他。' },
+      { id: 'c-when2', slot: 'when', part: 2, correct: true, text: '他上了' + lineName + '，往' + toName + '方向。' },
+      { id: 'c-why', slot: 'why', part: 1, correct: true, text: kase.why },
+      { id: 'd-who1', slot: 'who', part: 1, correct: false, text: otherCulprit.traits[0] + '。' },
+      { id: 'd-who2', slot: 'who', part: 2, correct: false, text: culprit.near + '。' },
+      { id: 'd-when1', slot: 'when', part: 1, correct: false, text: otherTime + '，有人在' + STATIONS[otherStation].name + '看见他。' },
+      { id: 'd-when2', slot: 'when', part: 2, correct: false, text: '他上了' + otherLine.name + '，往' + STATIONS[otherTo].name + '方向。' },
+      { id: 'd-why', slot: 'why', part: 1, correct: false, text: otherCase.why }
+    ];
+  }
+
+  function generatePoints(rng, fragDefs, legs) {
+    const pts = [];
+    Object.keys(STATIONS).forEach((sid, i) => {
+      const p1 = PLATFORM[i % PLATFORM.length];
+      const p2 = INDOOR[i % INDOOR.length];
+      const p3 = EXTRA[i % EXTRA.length];
+      pts.push({ id: sid + '-p', station: sid, name: p1.name, desc: p1.desc, searched: false, content: null, result: '' });
+      pts.push({ id: sid + '-i', station: sid, name: p2.name, desc: p2.desc, searched: false, content: null, result: '' });
+      pts.push({ id: sid + '-x', station: sid, name: p3.name, desc: p3.desc, searched: false, content: null, result: '' });
+    });
+    const lockPoint = pick(rng, pts.filter(p => p.station === legs[2].from));
+    lockPoint.content = { type: 'lock' };
+    const targets = fragDefs.filter(f => f.correct).map(f => ({ type: 'frag', id: f.id }));
+    fragDefs.filter(f => !f.correct).slice(0, 3).forEach(f => targets.push({ type: 'frag', id: f.id }));
+    EVIDENCE.slice(0, 4).forEach(e => targets.push({ type: 'evidence', id: e.id }));
+    const free = shuffle(rng, pts.filter(p => !p.content));
+    shuffle(rng, targets).forEach((t, i) => { if (free[i]) free[i].content = t; });
+    free.slice(targets.length).forEach((p, i) => { p.content = i < 6 ? { type: 'noise' } : null; });
+    return pts;
+  }
+
+  function newGame(seedVal) {
+    seed = (seedVal >>> 0) || 1;
+    const rng = mulberry32(seed);
+    const legs = generateLegs(rng);
+    const culprit = pick(rng, CULPRITS);
+    const kase = pick(rng, CASES);
+    const fragDefs = generateFragments(rng, culprit, kase, legs);
+    const points = generatePoints(rng, fragDefs, legs);
+    const keyPoints = points.filter(p => p.content && (p.content.type === 'lock' || p.content.type === 'evidence' ||
+      (p.content.type === 'frag' && fragDefs.find(f => f.id === p.content.id).correct)));
+    const npcs = {};
+    let hi = 0;
+    Object.keys(STATION_NPCS).forEach(sid => {
+      const base = STATION_NPCS[sid];
+      const isKey = !!base.keyNpc;
+      const wantTag = isKey ? culprit.tag : null;
+      npcs[sid] = Object.assign({}, base, {
+        id: sid,
+        want: wantTag,
+        question: wantTag ? TAG_QUESTIONS[wantTag] : '',
+        success: isKey ? '他压低声音，说了一个地点。' : '',
+        fail: isKey ? '他摇了摇头，不再说话。' : '',
+        hintTarget: keyPoints[hi++ % keyPoints.length] || null,
+        told: false, used: false, spoken: '', persona: base.persona || ''
+      });
+    });
+    const culpritCarriage = rng() < 0.5 ? 1 : 2;
+    S = {
+      seed: seed, time: 0, station: 'central', scene: 'station', train: null, carriage: 1,
+      culprit: culprit, case: kase, fragDefs: fragDefs, frags: [],
+      board: { who1: null, who2: null, when1: null, when2: null, why: null },
+      lock: null, lockData: kase.lock,
+      evidence: [], items: [],
+      points: points, npcs: npcs, legs: legs, culpritCarriage: culpritCarriage,
+      paxCache: {}, trainPtsCache: {},
+      readUsed: false, events: 0, eventCooldown: 0,
+      bonusCheck: 0, whistle: false, over: false,
+      log: [], nextDeps: [], modalSeq: 0, hints: [],
+      clueFlashId: null, clueFlashUntil: 0, dupClueId: null, dupUntil: 0,
+      lastTransit: null, invTab: 'frags', invSel: null, hasNewClue: false,
+      eventRng: mulberry32(hashStr('ev' + seed))
+    };
+    log('中央站 · 末班车 23:30。补齐三条链，找到锁，再抓人。', 'system');
+    render();
+    showStart();
+  }
+
+  /* ---------- helpers ---------- */
+  function log(msg, kind) {
+    S.log.unshift({ t: fmt(S.time), kind: kind || 'system', text: msg });
+    if (S.log.length > 80) S.log.pop();
+  }
+  function toast(msg, sub) {
+    const t = $('#toast');
+    t.innerHTML = '<b>' + msg + '</b>' + (sub ? '<small>' + sub + '</small>' : '');
+    t.hidden = false;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function stationLabel(sid) {
+    const n = STATIONS[sid].name;
+    return /站$/.test(n) ? n : n + '站';
+  }
+  function shortText(s) { return s.length > 34 ? s.slice(0, 34) + '…' : s; }
+  function fragById(id) { return S.fragDefs.find(f => f.id === id); }
+  function hasFrag(id) { return S.frags.some(f => f.id === id); }
+  function slotDone(slot) {
+    if (slot === 'who') return S.board.who1 === 'c-who1' && S.board.who2 === 'c-who2';
+    if (slot === 'when') return S.board.when1 === 'c-when1' && S.board.when2 === 'c-when2';
+    return S.board.why === 'c-why';
+  }
+  function keyCount() { return ['who', 'when', 'why'].filter(slotDone).length; }
+  function hasAll() { return keyCount() === 3 && !!S.lock; }
+  function flashClue(id, dup) {
+    if (dup) { S.dupClueId = id; S.dupUntil = Date.now() + 3200; }
+    else { S.clueFlashId = id; S.clueFlashUntil = Date.now() + 3200; }
+    clearTimeout(flashClue._t);
+    flashClue._t = setTimeout(() => { if (S) render(); }, 3300);
+  }
+  function addHint(text) {
+    if (!text) return;
+    if (!S.hints.includes(text)) { S.hints.push(text); flashClue('hint'); }
+  }
+  function addFrag(id) {
+    const f = fragById(id);
+    if (!f) return false;
+    if (hasFrag(id)) { flashClue('frag:' + id, true); toast('重复线索', '已收录：' + shortText(f.text)); log('重复线索：' + shortText(f.text), 'clue'); return false; }
+    S.frags.push(f);
+    S.hasNewClue = true;
+    flashClue('frag:' + id);
+    toast('获得线索', shortText(f.text));
+    log('获得线索：' + shortText(f.text), 'clue');
+    return true;
+  }
+  function addEvidence(id) {
+    const e = EVIDENCE.find(x => x.id === id);
+    if (!e) return false;
+    if (S.evidence.some(x => x.id === id)) {
+      flashClue('ev:' + id, true);
+      toast('重复物证', '已收录：' + e.name);
+      log('重复物证：' + e.name, 'item');
+      return false;
+    }
+    S.evidence.push(e);
+    S.hasNewClue = true;
+    flashClue('ev:' + id);
+    toast('获得物证：' + e.name, e.tag + ' · ' + shortText(e.desc));
+    log('获得物证：' + e.name, 'item');
+    return true;
+  }
+  function addItem(item) {
+    if (S.items.includes(item)) return false;
+    S.items.push(item);
+    if (item === 'whistle') S.whistle = true;
+    S.hasNewClue = true;
+    flashClue('item:' + item);
+    toast('获得道具：' + (item === 'ticket' ? '旧车票' : '列车员哨'), item === 'ticket' ? '下一次追问 +20%' : '可追上刚开走的车');
+    log('获得道具：' + (item === 'ticket' ? '旧车票' : '列车员哨'), 'item');
+    return true;
+  }
+  function giveLockHint() {
+    const p = S.points.find(x => x.content && x.content.type === 'lock');
+    if (!p) return;
+    const text = '锁在' + stationLabel(p.station) + '的' + p.name + '。';
+    addHint(text);
+    log(text, 'clue');
+  }
+  function grantMissingFrag() {
+    const f = S.fragDefs.find(x => x.correct && !hasFrag(x.id));
+    if (f) { addFrag(f.id); return f; }
+    giveLockHint();
+    return null;
+  }
+  function canSpend(cost) {
+    if (!S || S.over) return false;
+    if (S.scene === 'train' && S.train) return S.time + cost <= S.train.endTime;
+    return true;
+  }
+  function advance(cost) {
+    S.time += cost;
+    if (S.time > NIGHT_END) S.time = NIGHT_END;
+    if (S.scene === 'train' && S.train && S.time >= S.train.endTime) arrive();
+    if (S.time >= NIGHT_END && !S.over) endGame(false, '23:30，末班车收车。');
+  }
+  function arrive() {
+    if (!S.train) return;
+    const to = S.train.to;
+    S.scene = 'station';
+    S.station = to;
+    S.train = null;
+    S.carriage = 1;
+    S.lastTransit = { type: 'alight', time: fmt(S.time), title: '到站', text: stationLabel(to) + ' · 站台' };
+    log('到站 ' + stationLabel(to), 'alight');
+    toast('到站', stationLabel(to));
+    maybeEvent();
+  }
+  function dirName(svc) {
+    return '往' + STATIONS[svc.next].name + '方向';
+  }
+  function findPoint(id) {
+    let p = S.points.find(x => x.id === id);
+    if (p) return p;
+    if (S.train) {
+      p = getTrainPoints(S.train.service, S.carriage).find(x => x.id === id);
+    }
+    return p || null;
+  }
+  function getPax(service, carriage) {
+    const key = service.key + '#' + carriage;
+    if (S.paxCache[key]) return S.paxCache[key];
+    const rng = mulberry32(hashStr(S.seed + '|pax|' + key));
+    const list = [];
+    const isFinal = service.key === S.legs[2].key;
+    if (isFinal) {
+      if (carriage === S.culpritCarriage) {
+        list.push({ name: '乘客', desc: S.culprit.desc, id: 'culprit', isCulprit: true, keyNpc: false, spoken: '' });
+      } else {
+        list.push({ name: '乘客', desc: S.culprit.near, id: 'decoy', isDecoy: true, keyNpc: false, spoken: '' });
+      }
+    }
+    const pool = shuffle(rng, FLAVOR_NPCS);
+    const count = isFinal ? 2 : 3;
+    for (let i = 0; i < count; i++) {
+      const base = pool[i % pool.length];
+      const isKey = i === 0 && rng() < 0.5;
+      const wantTag = isKey ? pick(rng, EVIDENCE).tag : null;
+      list.push(Object.assign({}, base, {
+        id: 'f' + i + '-' + carriage,
+        keyNpc: isKey,
+        want: wantTag,
+        question: wantTag ? TAG_QUESTIONS[wantTag] : '',
+        success: isKey ? '他压低声音，说了一个地点。' : '',
+        fail: isKey ? '他摇了摇头，不再说话。' : '',
+        used: false,
+        spoken: ''
+      }));
+    }
+    S.paxCache[key] = list;
+    return list;
+  }
+  function getTrainPoints(service, carriage) {
+    const key = service.key + '#' + carriage;
+    if (S.trainPtsCache[key]) return S.trainPtsCache[key];
+    const rng = mulberry32(hashStr(S.seed + '|tp|' + key));
+    const pts = [
+      { id: key + '-rack', name: '行李架', desc: '架上有一只没有主人的箱子。', searched: false, content: null, result: '' },
+      { id: key + '-seat', name: '座椅缝', desc: '缝里卡着一点布屑。', searched: false, content: null, result: '' },
+      { id: key + '-door', name: '车厢连接处', desc: '门缝里灌进风，地上有一小片黑灰。', searched: false, content: null, result: '' }
+    ];
+    pts.forEach(p => {
+      const roll = rng();
+      if (roll < 0.42) p.content = { type: 'evidence', id: pick(rng, EVIDENCE).id };
+      else if (roll < 0.62) p.content = { type: 'noise' };
+    });
+    S.trainPtsCache[key] = pts;
+    return pts;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    if (!S) return;
+    renderHud();
+    renderScene();
+    renderDepartures();
+    renderMap();
+    renderPack();
+    renderLog();
+    $('#foot').textContent = 'seed ' + S.seed + '　·　21:00–23:30　·　150 分钟　·　线索夹里看说明';
+  }
+
+  function renderHud() {
+    $('#clock').textContent = fmt(S.time);
+    if (S.scene === 'train' && S.train) {
+      const line = LINES[S.train.service.lid].name;
+      const remain = Math.max(0, S.train.endTime - S.time);
+      $('#place').textContent = line + ' · ' + S.carriage + ' 号车厢';
+      $('#where').textContent = '往' + STATIONS[S.train.to].name + ' · 还有 ' + remain + ' 分钟';
+    } else {
+      $('#place').textContent = stationLabel(S.station);
+      $('#where').textContent = '站台 · 候车';
+    }
+    const kc = keyCount();
+    $('#invBtn').textContent = '线索夹' + (S.hasNewClue ? ' •' : '');
+    $('#stats').innerHTML =
+      '<span>链条 <b>' + kc + '/3</b></span>' +
+      '<span>锁 <b>' + (S.lock ? '1/1' : '0/1') + '</b></span>' +
+      '<span>线索 <b>' + S.frags.length + '</b></span>' +
+      '<span>物证 <b>' + S.evidence.length + '</b></span>' +
+      '<span>读心 <b>' + (S.readUsed ? '已用' : '可用') + '</b></span>';
+  }
+
+  function pointHtml(p) {
+    if (!p.searched) {
+      return '<div class="point"><span class="pt-name">' + p.name + '</span>' +
+        '<span class="pt-desc">' + p.desc + '</span>' +
+        '<div class="pt-act"><button class="btn small" data-act="search" data-id="' + p.id + '">搜（2 分）</button></div></div>';
+    }
+    return '<div class="point searched"><span class="pt-name">' + p.name + '</span>' +
+      '<span class="pt-desc">' + p.desc + '</span>' +
+      '<div class="pt-result">' + (p.result || '什么也没有。') + '</div></div>';
+  }
+
+  function stationNpcHtml(npc) {
+    let acts = '<button class="btn small" data-act="talk" data-id="' + npc.id + '">交谈（2 分）</button>';
+    if (npc.keyNpc) acts += '<button class="btn small" data-act="check" data-id="' + npc.id + '">追问</button>';
+    if (npc.keyNpc) acts += '<button class="btn small" data-act="read" data-id="' + npc.id + '" ' + (S.readUsed ? 'disabled' : '') + '>读心</button>';
+    return '<div class="npc"><div><div class="who">' + npc.name + (npc.name.indexOf(npc.role) < 0 ? '<span>' + npc.role + '</span>' : '') +
+      (npc.keyNpc ? '<span class="badge">关键</span>' : '') + '</div>' +
+      (npc.persona ? '<div class="line">' + npc.persona + '</div>' : '') +
+      '<div class="line">' + npc.line + '</div>' +
+      (npc.spoken ? '<div class="line">“' + npc.spoken + '”</div>' : '') +
+      '</div><div class="acts">' + acts + '</div></div>';
+  }
+
+  function paxHtml(p) {
+    let acts = '<button class="btn small" data-act="talk-pax" data-id="' + p.id + '">交谈（2 分）</button>';
+    if (p.keyNpc) acts += '<button class="btn small" data-act="check-pax" data-id="' + p.id + '">追问</button>';
+    if (p.keyNpc) acts += '<button class="btn small" data-act="read" data-id="' + p.id + '" ' + (S.readUsed ? 'disabled' : '') + '>读心</button>';
+    acts += '<button class="btn small' + (hasAll() ? ' primary' : '') + '" data-act="arrest" data-id="' + p.id + '" ' + (hasAll() ? '' : 'disabled') + '>抓捕</button>';
+    return '<div class="npc"><div><div class="who">' + p.name + (p.keyNpc ? '<span class="badge">关键</span>' : '') + '</div>' +
+      '<div class="line">' + p.desc + '</div>' +
+      (p.spoken ? '<div class="line">“' + p.spoken + '”</div>' : '') +
+      '</div><div class="acts">' + acts + '</div></div>';
+  }
+
+  function renderScene() {
+    const scene = $('#scene');
+    const transit = S.lastTransit
+      ? '<div class="transit ' + S.lastTransit.type + '"><span class="tt">' + S.lastTransit.time + '</span><span>' + S.lastTransit.title + '</span><span>' + S.lastTransit.text + '</span></div>'
+      : '';
+    if (S.scene === 'station') {
+      scene.className = 'scene is-station';
+      const st = STATIONS[S.station];
+      const pts = S.points.filter(p => p.station === S.station);
+      const npc = S.npcs[S.station];
+      scene.innerHTML =
+        '<div class="loc-stamp">站台</div>' + transit +
+        '<div class="scene-head"><p class="kicker">站台 · PLATFORM</p><h1>' + stationLabel(S.station) + '</h1>' +
+        '<p class="desc">' + (STATION_DESC[S.station] || '') + '</p>' +
+        '<p class="scene-sub">搜一个点 2 分钟 · 交谈 2 分钟 · 时刻表在右侧</p></div>' +
+        '<div class="carriage-row"><button class="btn small" data-act="wait">等待 10 分钟</button><button class="btn small" data-act="wait-next">候车至下一班</button></div>' +
+        '<p class="wait-hint">「候车至下一班」会把时间推进到下一班车到站，不是刷新时刻表。</p>' +
+        '<div class="points">' + pts.map(pointHtml).join('') + '</div>' +
+        '<div class="npcs">' + stationNpcHtml(npc) + '</div>';
+    } else {
+      scene.className = 'scene is-train';
+      const tr = S.train;
+      const line = LINES[tr.service.lid];
+      const remain = Math.max(0, tr.endTime - S.time);
+      const pax = getPax(tr.service, S.carriage);
+      const tpts = getTrainPoints(tr.service, S.carriage);
+      scene.innerHTML =
+        '<div class="loc-stamp">车厢</div>' + transit +
+        '<div class="scene-head"><p class="kicker">车厢 · CARRIAGE</p>' +
+        '<h1>' + line.name + ' · ' + S.carriage + ' 号车厢</h1>' +
+        '<p class="desc">' + dirName(tr.service) + ' · 下一站 ' + STATIONS[tr.to].name + ' · 还有 ' + remain + ' 分钟</p>' +
+        '<p class="scene-sub">车厢里 ' + pax.length + ' 名乘客 · 换车厢 1 分钟 · 到站会自动下车</p></div>' +
+        '<div class="carriage-row"><span class="lbl">车厢</span>' +
+        [1, 2].map(n => '<button class="car-btn ' + (n === S.carriage ? 'on' : '') + '" data-act="car" data-id="' + n + '" ' + (n === S.carriage ? 'disabled' : '') + '>' + n + '</button>').join('') +
+        '<button class="btn small" data-act="alight" style="margin-left:auto">到站下车</button></div>' +
+        '<div class="points">' + tpts.map(pointHtml).join('') + '</div>' +
+        '<div class="npcs">' + pax.map(paxHtml).join('') + '</div>';
+    }
+  }
+
+  function renderDepartures() {
+    const host = $('#departures');
+    if (S.scene === 'train' && S.train) {
+      const remain = Math.max(0, S.train.endTime - S.time);
+      host.innerHTML = '<h3>当前列车</h3><p style="margin:0;font-size:12px;color:var(--dim)">' +
+        LINES[S.train.service.lid].name + ' · ' + dirName(S.train.service) + '<br>' +
+        '下一站 ' + STATIONS[S.train.to].name + ' · 还有 ' + remain + ' 分钟</p>';
+      return;
+    }
+    const deps = departuresAt(S.station, S.time);
+    S.nextDeps = deps;
+    if (!deps.length) {
+      host.innerHTML = '<h3>时刻表</h3><p style="margin:0;font-size:12px;color:var(--faint)">今晚没有车了。</p>';
+      return;
+    }
+    host.innerHTML = '<h3>下一班车</h3>' + deps.map(d => {
+      const line = LINES[d.lid];
+      const inMin = d.arr - S.time;
+      const missed = inMin < 0;
+      const canWhistle = missed && S.whistle && S.time - d.arr <= 2;
+      let go;
+      if (missed && !canWhistle) go = '<button class="btn tiny" disabled>已开</button>';
+      else go = '<button class="btn tiny" data-act="board" data-key="' + d.key + '">' + (missed ? '吹哨' : '上车') + '</button>';
+      return '<div class="dep"><span class="dot" style="background:' + line.color + '"></span>' +
+        '<span class="t">' + fmt(d.arr) + '</span>' +
+        '<span class="to"><b>' + line.name + ' · ' + STATIONS[d.next].name + '</b>' + (missed ? '刚开走' : (inMin > 0 ? inMin + ' 分钟后' : '现在')) + '</span>' +
+        '<span class="go">' + go + '</span></div>';
+    }).join('');
+  }
+
+  function renderMap() {
+    let lines = '';
+    Object.keys(LINES).forEach(lid => {
+      const line = LINES[lid];
+      const pts = line.stations.map(s => STATIONS[s].x + ',' + STATIONS[s].y).join(' ');
+      lines += '<polyline points="' + pts + '" fill="none" stroke="' + line.color + '" stroke-width="3" opacity=".5"/>';
+    });
+    let dots = '';
+    Object.keys(STATIONS).forEach(sid => {
+      const st = STATIONS[sid];
+      const here = sid === S.station;
+      dots += '<circle cx="' + st.x + '" cy="' + st.y + '" r="' + (here ? 7 : 4) + '" fill="' + (here ? '#c0503f' : '#0a0e16') + '" stroke="' + (here ? '#f0c9b8' : '#8b93a5') + '" stroke-width="1.6"/>';
+      dots += '<text x="' + st.x + '" y="' + (st.y - 12) + '" fill="' + (here ? '#e8e4d9' : '#8b93a5') + '" font-size="11" text-anchor="middle">' + st.name + '</text>';
+    });
+    $('#mapPanel').innerHTML = '<h3>线路图</h3><svg class="map" viewBox="0 0 390 260">' + lines + dots + '</svg>';
+  }
+
+  function renderPack() {
+    const fresh = S.hasNewClue ? '<span class="badge">新</span>' : '';
+    $('#packPanel').innerHTML = '<h3>线索夹' + fresh + '</h3>' +
+      '<div class="pack-counts">' +
+      '<div>线索 <b>' + S.frags.length + '</b></div>' +
+      '<div>物证 <b>' + S.evidence.length + '</b></div>' +
+      '<div>道具 <b>' + S.items.length + '</b></div>' +
+      '<div>锁 <b>' + (S.lock ? '1' : '0') + '</b></div>' +
+      '</div>' +
+      '<button class="btn small pack-open" id="packOpen">打开线索夹</button>';
+    $('#packOpen').onclick = () => openInventory(S.invTab || 'frags');
+  }
+
+  function renderLog() {
+    const kindLabel = { system: '系统', move: '移动', board: '上车', alight: '到站', search: '搜索', talk: '交谈', check: '追问', read: '读心', clue: '线索', item: '物证', event: '事件', time: '时间', arrest: '抓捕' };
+    const rows = S.log.slice(0, 5).map(e =>
+      '<div class="log-row ' + e.kind + '"><span class="lt">' + e.t + '</span><span class="lk">' + (kindLabel[e.kind] || '') + '</span><span class="lx">' + e.text + '</span></div>'
+    ).join('');
+    $('#logPanel').innerHTML = '<h3>最近行动</h3><div class="log">' + (rows || '<div class="inv-empty">还没有行动。</div>') + '</div>';
+  }
+
+  /* ---------- inventory ---------- */
+  const SLOT_LABEL = { who: '身份', when: '机会', why: '动机' };
+  function invTabs() {
+    const tabs = [
+      ['frags', '线索', S.frags.length + (S.lock ? 1 : 0)],
+      ['evidence', '物证', S.evidence.length],
+      ['items', '道具', S.items.length],
+      ['board', '推理', keyCount() + '/3']
+    ];
+    return '<div class="tabs">' + tabs.map(t =>
+      '<button class="tab ' + (S.invTab === t[0] ? 'on' : '') + '" data-tab="' + t[0] + '">' + t[1] + ' <b>' + t[2] + '</b></button>'
+    ).join('') + '</div>';
+  }
+  function invCard(type, id, icon, name, meta, extraClass) {
+    const on = S.invSel && S.invSel.type === type && S.invSel.id === id;
+    const flashId = type === 'frag' ? 'frag:' + id : type === 'evidence' ? 'ev:' + id : type === 'item' ? 'item:' + id : type === 'lock' ? 'lock' : '';
+    const fresh = (Date.now() < S.clueFlashUntil && S.clueFlashId === flashId) ? ' new' : '';
+    const dup = (Date.now() < S.dupUntil && S.dupClueId === flashId) ? ' dup' : '';
+    return '<button class="inv-card ' + (extraClass || '') + (on ? ' on' : '') + fresh + dup + '" data-type="' + type + '" data-id="' + id + '">' +
+      '<span class="ic">' + icon + '</span><span class="nm">' + name + '</span><span class="mt">' + meta + '</span></button>';
+  }
+  function invDetailHtml() {
+    if (!S.invSel) return '<div class="inv-empty">点一件东西，查看它的说明和用途。</div>';
+    const sel = S.invSel;
+    if (sel.type === 'frag') {
+      const f = fragById(sel.id);
+      if (!f) return '<div class="inv-empty">这条线索不在手上了。</div>';
+      return '<h3>' + SLOT_LABEL[f.slot] + '线索</h3><div class="meta">' + (f.part === 1 ? '前半段' : '后半段') + '</div>' +
+        '<p class="desc">' + f.text + '</p>' +
+        '<p class="use">在「推理」里把它放进对应的位置。选错不会告诉你错在哪，但链条不会成立。</p>';
+    }
+    if (sel.type === 'evidence') {
+      const e = EVIDENCE.find(x => x.id === sel.id);
+      if (!e) return '<div class="inv-empty">这件物证不在手上了。</div>';
+      return '<h3>' + e.name + '</h3><div class="meta">物证 · ' + e.tag + '</div>' +
+        '<p class="desc">' + e.desc + '</p>' +
+        (e.lore ? '<p class="lore">' + e.lore + '</p>' : '') +
+        '<p class="use">' + e.use + '</p>';
+    }
+    if (sel.type === 'item') {
+      const name = sel.id === 'ticket' ? '旧车票' : '列车员哨';
+      const desc = sel.id === 'ticket' ? '一张边缘磨白的旧票，背面有铅笔写的日期。' : '一枚黄铜哨子，吹响时声音很短。';
+      const use = sel.id === 'ticket' ? '下一次追问 +20%；也可以在查票事件里出示。' : '可以追上刚开走 2 分钟内的车。';
+      return '<h3>' + name + '</h3><div class="meta">道具</div><p class="desc">' + desc + '</p><p class="use">' + use + '</p>';
+    }
+    if (sel.type === 'lock') {
+      const l = S.lock;
+      if (!l) return '<div class="inv-empty">还没有找到锁。</div>';
+      return '<h3>' + l.name + '</h3><div class="meta">锁 · 决定性物证</div>' +
+        '<p class="desc">' + l.desc + '</p>' +
+        (l.lore ? '<p class="lore">' + l.lore + '</p>' : '') +
+        '<p class="use">它证明案子确实发生过。还需要身份、机会、动机三条链，才能指认车上的人。</p>';
+    }
+    return '';
+  }
+  function renderInvBody() {
+    const host = $('#invBody');
+    if (!host) return;
+    let cards = '';
+    if (S.invTab === 'frags') {
+      if (S.lock) cards += invCard('lock', 'lock', '🔒', S.lock.name, '锁', 'lock');
+      cards += S.frags.map(f => invCard('frag', f.id, f.slot === 'who' ? '👤' : f.slot === 'when' ? '🕰' : '◆', shortText(f.text), SLOT_LABEL[f.slot])).join('');
+      if (!cards) cards = '<div class="inv-empty">还没有线索。去站台和车厢里搜，或者问人。</div>';
+      const hints = S.hints.length ? '<div class="hint-box"><b>地点提示</b>' + S.hints.map(h => '<div>' + h + '</div>').join('') + '</div>' : '';
+      host.innerHTML = '<div class="inv-grid">' + cards + '</div>' + '<div class="inv-detail" id="invDetail">' + invDetailHtml() + '</div>' + hints;
+    } else if (S.invTab === 'evidence') {
+      cards = S.evidence.map(e => invCard('evidence', e.id, '▣', e.name, e.tag)).join('');
+      if (!cards) cards = '<div class="inv-empty">还没有物证。车厢的行李架、座椅缝、车站的角落都可能有。</div>';
+      host.innerHTML = '<div class="inv-grid">' + cards + '</div><div class="inv-detail" id="invDetail">' + invDetailHtml() + '</div>';
+    } else if (S.invTab === 'items') {
+      cards = S.items.map(it => invCard('item', it, it === 'ticket' ? '🎫' : '🔔', it === 'ticket' ? '旧车票' : '列车员哨', '道具')).join('');
+      if (!cards) cards = '<div class="inv-empty">还没有道具。突发事件里可能拿到。</div>';
+      host.innerHTML = '<div class="inv-grid">' + cards + '</div><div class="inv-detail" id="invDetail">' + invDetailHtml() + '</div>';
+    } else {
+      host.innerHTML = boardHtml();
+      bindBoard();
+    }
+    $$('#invBody .inv-card').forEach(card => {
+      card.onclick = () => {
+        S.invSel = { type: card.dataset.type, id: card.dataset.id };
+        renderInvBody();
+      };
+    });
+  }
+  function openInventory(tab) {
+    S.hasNewClue = false;
+    renderHud();
+    renderPack();
+    S.invTab = tab || S.invTab || 'frags';
+    openModal('<p class="m-kicker">线索夹</p><h2>你手上的东西</h2>' + invTabs() + '<div id="invBody"></div><button class="close-x" id="closeBtn">×</button>');
+    $('#closeBtn').onclick = () => { closeModal(); render(); };
+    $$('#modal [data-tab]').forEach(btn => {
+      btn.onclick = () => { S.invTab = btn.dataset.tab; openInventory(S.invTab); };
+    });
+    renderInvBody();
+  }
+  function boardRow(key, label, slot) {
+    const opts = S.frags.filter(f => f.slot === slot).map(f =>
+      '<option value="' + f.id + '" ' + (S.board[key] === f.id ? 'selected' : '') + '>' + shortText(f.text) + '</option>'
+    ).join('');
+    return '<div class="board-row"><label>' + label + '</label><select data-board="' + key + '"><option value="">— 未选择 —</option>' + opts + '</select></div>';
+  }
+  function boardHtml() {
+    const status = ['who', 'when', 'why'].map(s => SLOT_LABEL[s] + ' ' + (slotDone(s) ? '✓' : '—')).join(' · ');
+    return '<div class="board-form">' +
+      boardRow('who1', '身份·外形', 'who') + boardRow('who2', '身份·随身物', 'who') +
+      boardRow('when1', '机会·时间', 'when') + boardRow('when2', '机会·车次', 'when') +
+      boardRow('why', '动机·原因', 'why') + '</div>' +
+      '<div class="board-status" id="boardStatus">' + status + '　·　锁 ' + (S.lock ? '✓' : '—') + '<br>' +
+      (hasAll() ? '<b>链条完整：可以上车抓人。</b>' : '把线索放进对应位置。选错不会告诉你错在哪，但链条不会成立。') + '</div>';
+  }
+  function bindBoard() {
+    $$('#invBody [data-board]').forEach(sel => {
+      sel.onchange = () => {
+        S.board[sel.dataset.board] = sel.value || null;
+        renderHud();
+        const st = $('#boardStatus');
+        if (st) {
+          const status = ['who', 'when', 'why'].map(s => SLOT_LABEL[s] + ' ' + (slotDone(s) ? '✓' : '—')).join(' · ');
+          st.innerHTML = status + '　·　锁 ' + (S.lock ? '✓' : '—') + '<br>' +
+            (hasAll() ? '<b>链条完整：可以上车抓人。</b>' : '把线索放进对应位置。选错不会告诉你错在哪，但链条不会成立。');
+        }
+      };
+    });
+  }
+
+  /* ---------- actions ---------- */
+  function applyPointResult(p) {
+    const c = p.content;
+    if (!c) { p.result = '什么也没有。只有一点灰。'; log('搜 ' + p.name + '：空', 'search'); return; }
+    if (c.type === 'frag') {
+      const f = fragById(c.id);
+      const isNew = addFrag(c.id);
+      p.result = (isNew ? '线索：' : '重复线索（已收录）：') + (f ? f.text : '');
+      return;
+    }
+    if (c.type === 'lock') {
+      S.lock = S.lockData;
+      S.hasNewClue = true;
+      p.result = '锁：' + S.lock.name + '。' + S.lock.desc;
+      flashClue('lock');
+      log('找到锁：' + S.lock.name, 'clue');
+      toast('找到锁', S.lock.name);
+      showLockModal();
+      return;
+    }
+    if (c.type === 'evidence') {
+      const ev = EVIDENCE.find(e => e.id === c.id);
+      addEvidence(c.id);
+      p.result = '物证：' + (ev ? ev.name + '。' + ev.desc : '');
+      return;
+    }
+    p.result = '没有别的了。';
+    log('搜 ' + p.name + '：空', 'search');
+  }
+
+  function showLockModal() {
+    const l = S.lock;
+    if (!l) return;
+    openModal('<p class="m-kicker">找到锁</p><h2>' + l.name + '</h2>' +
+      '<p class="desc">' + l.desc + '</p>' +
+      (l.lore ? '<p class="lore">' + l.lore + '</p>' : '') +
+      '<p>它证明案子确实发生过。现在把身份、机会、动机三条链补齐。</p>' +
+      '<div class="choices"><button class="choice" id="okBtn">收下</button></div>');
+    $('#okBtn').onclick = closeModal;
+  }
+
+  function doSearch(id) {
+    const p = findPoint(id);
+    if (!p || p.searched) return;
+    if (!canSpend(2)) { toast('时间不够，列车要开了。'); return; }
+    applyPointResult(p);
+    p.searched = true;
+    advance(2);
+    render();
+  }
+
+  function doTalkStation(sid) {
+    const npc = S.npcs[sid];
+    if (!canSpend(2)) { toast('时间不够。'); return; }
+    advance(2);
+    if (!npc.told && npc.hintTarget) {
+      npc.told = true;
+      npc.spoken = '我在' + stationLabel(npc.hintTarget.station) + '的' + npc.hintTarget.name + '那儿，看见有人翻东西。';
+      addHint(npc.spoken);
+      log('交谈 ' + npc.name + '：得到地点提示', 'talk');
+    } else if (npc.keyNpc) {
+      npc.spoken = npc.question || '他看了你一眼，没有多说。';
+      log('交谈 ' + npc.name + '：他问起一件东西', 'talk');
+    } else {
+      npc.spoken = '他摇摇头，继续做自己的事。';
+      log('交谈 ' + npc.name + '：没有更多', 'talk');
+    }
+    render();
+  }
+
+  function doTalkPax(id) {
+    const p = getPax(S.train.service, S.carriage).find(x => x.id === id);
+    if (!p) return;
+    if (!canSpend(2)) { toast('时间不够。'); return; }
+    advance(2);
+    if (p.isCulprit || p.isDecoy) p.spoken = '他把箱子往身后挪了挪，没有看你。';
+    else if (p.keyNpc) p.spoken = p.question || '他压低声音，说了一句听不清的话。';
+    else p.spoken = S.eventRng() < 0.5 ? (p.line || '我什么也没看见。') : (p.line2 || p.line || '这班车总是很挤。');
+    log('交谈 ' + p.name + '：' + (p.keyNpc ? '他在打听一件东西' : '一句话'), 'talk');
+    render();
+  }
+
+  function doRead(id) {
+    if (S.readUsed) { toast('这一局已经用过了。'); return; }
+    let target = null;
+    if (S.scene === 'train') target = getPax(S.train.service, S.carriage).find(x => x.id === id);
+    else target = S.npcs[id];
+    if (!target || !target.keyNpc) { toast('只能对关键 NPC 读心。'); return; }
+    S.readUsed = true;
+    const f = grantMissingFrag();
+    if (f) {
+      target.spoken = '（心声）' + f.text;
+      log('读心 ' + target.name + '：得到线索', 'read');
+    } else {
+      target.spoken = '（心声）他知道锁在哪儿。';
+      log('读心 ' + target.name + '：锁的位置', 'read');
+    }
+    render();
+  }
+
+  function openCheckStation(sid) {
+    const npc = S.npcs[sid];
+    if (!npc.keyNpc) return;
+    openCheck(npc, '关键 NPC', () => { npc.used = true; });
+  }
+
+  function openCheckPax(id) {
+    const p = getPax(S.train.service, S.carriage).find(x => x.id === id);
+    if (!p || !p.keyNpc) return;
+    openCheck(p, '关键乘客', () => { p.used = true; });
+  }
+
+  function openCheck(target, kicker, markUsed) {
+    if (target.used) { toast('他已经不想再谈了。'); return; }
+    if (!canSpend(2)) { toast('时间不够。'); return; }
+    const question = target.question || '他看了你一眼，等你先开口。';
+    const evHtml = S.evidence.length
+      ? S.evidence.map(e => '<label><input type="radio" name="ev" value="' + e.id + '"> <span><b>' + e.name + '</b> <em>[' + e.tag + ']</em>　' + e.desc + '</span></label>').join('')
+      : '<p style="margin:0">你还没有可以出示的物证。</p>';
+    openModal('<p class="m-kicker">' + kicker + '</p><h2>' + target.name + '</h2>' +
+      (target.persona ? '<p>' + target.persona + '</p>' : '') +
+      '<div class="question">“' + question + '”</div>' +
+      '<p>只能出示一件物证。对口的物证会提高把握，无关的物证会降低。</p>' +
+      '<div class="evpick">' + evHtml + '</div>' +
+      '<p>基础把握 <span class="chance" id="chance">' + (50 + S.bonusCheck) + '%</span></p>' +
+      (S.items.includes('ticket') ? '<button class="btn small" id="ticketBtn">用旧车票 +20%</button>' : '') +
+      '<div class="choices"><button class="choice" id="askBtn">出示并追问（2 分钟）</button></div>' +
+      '<button class="close-x" id="closeBtn">×</button>');
+    const seq = S.modalSeq;
+    const tbtn = $('#ticketBtn');
+    if (tbtn) tbtn.onclick = () => {
+      S.bonusCheck = 20;
+      S.items = S.items.filter(x => x !== 'ticket');
+      tbtn.disabled = true;
+      tbtn.textContent = '已用旧车票';
+      $('#chance').textContent = (50 + S.bonusCheck) + '%';
+    };
+    $('#closeBtn').onclick = closeModal;
+    $('#askBtn').onclick = () => {
+      const picked = $('#modal input[name="ev"]:checked');
+      const ev = picked ? S.evidence.find(e => e.id === picked.value) : null;
+      const match = !!(ev && target.want && ev.tag === target.want);
+      const chance = Math.max(5, Math.min(95, 50 + (ev ? (match ? 40 : -10) : 0) + S.bonusCheck));
+      S.bonusCheck = 0;
+      markUsed();
+      advance(2);
+      if (S.over) { render(); return; }
+      if (S.eventRng() * 100 < chance) {
+        const f = grantMissingFrag();
+        target.spoken = f ? '他低声说：“' + f.text + '”' : '他说：“锁在哪儿，我知道。”';
+        log('追问 ' + target.name + '：成功' + (match ? ' · 物证对口' : ''), 'check');
+      } else {
+        target.spoken = target.fail || '他摇了摇头，不再说话。';
+        log('追问 ' + target.name + '：失败' + (match ? ' · 物证对口' : ''), 'check');
+      }
+      if (S.modalSeq === seq) closeModal();
+      render();
+    };
+  }
+
+  function doArrest(id) {
+    if (!hasAll()) { toast('证据不足：还差链条或锁。'); return; }
+    const p = getPax(S.train.service, S.carriage).find(x => x.id === id);
+    if (!p) return;
+    if (p.isCulprit) {
+      endGame(true, '你在 ' + fmt(S.time) + ' 的 ' + LINES[S.train.service.lid].name + ' ' + S.carriage + ' 号车厢，抓住了他。');
+    } else {
+      if (!canSpend(2)) { toast('时间不够。'); return; }
+      advance(2);
+      log('抓错 乘客：不是他', 'arrest');
+      toast('不是他。', '外套、手套或箱子对不上。');
+      render();
+    }
+  }
+
+  function moveCar(n) {
+    if (S.scene !== 'train' || !S.train) return;
+    if (Number(n) === S.carriage) return;
+    if (!canSpend(1)) { toast('列车要开了。'); return; }
+    advance(1);
+    S.carriage = Number(n);
+    log('换到 ' + n + ' 号车厢', 'move');
+    render();
+  }
+
+  function alight() {
+    if (S.scene !== 'train' || !S.train) return;
+    S.time = Math.max(S.time, S.train.endTime);
+    arrive();
+    render();
+  }
+
+  function waitTen() {
+    if (S.scene !== 'station') return;
+    if (!canSpend(10)) { toast('时间不够。'); return; }
+    advance(10);
+    log('等待 10 分钟', 'time');
+    render();
+  }
+
+  function waitNext() {
+    if (S.scene !== 'station') return;
+    const deps = departuresAt(S.station, S.time).filter(d => d.arr > S.time);
+    if (!deps.length) { toast('今晚没有车了。'); return; }
+    const target = deps[0].arr;
+    const cost = target - S.time;
+    advance(cost);
+    log('候车至 ' + fmt(target), 'time');
+    toast('候车至下一班', fmt(target) + ' 到站');
+    render();
+  }
+
+  function board(key) {
+    const svc = S.nextDeps.find(d => d.key === key);
+    if (!svc) return;
+    if (S.time > svc.arr) {
+      if (S.whistle && S.time - svc.arr <= 2) {
+        S.whistle = false;
+        log('你吹响哨子，列车等了你两分钟。');
+      } else {
+        toast('车已经开了。');
+        return;
+      }
+    }
+    S.time = Math.max(S.time, svc.arr);
+    S.scene = 'train';
+    S.train = { service: svc, to: svc.next, endTime: svc.arr + 6 };
+    S.carriage = 1;
+    const line = LINES[svc.lid].name;
+    const dir = dirName(svc);
+    S.lastTransit = { type: 'board', time: fmt(S.time), title: '上车', text: line + ' · ' + dir + ' · ' + S.carriage + ' 号车厢' };
+    log('上车 ' + line + ' ' + dir + ' · ' + S.carriage + '号', 'board');
+    toast('已上车', line + ' · ' + dir);
+    render();
+  }
+
+  /* ---------- events ---------- */
+  const EVENTS = [
+    {
+      title: '醉汉堵门',
+      text: '一个醉汉横在车门前，嘴里念叨着听不清的站名。',
+      choices: [
+        { label: '挤过去', sub: '−1 分钟 · 50% 被绊住再 −2', time: 1, chance: 0.5, failTime: 2, successText: '你从他胳膊底下挤了过去。', failText: '你被他的腿绊了一下，多花了 2 分钟。' },
+        { label: '绕行', sub: '−4 分钟 · 安全', time: 4, successText: '你从另一边绕了过去。' },
+        { label: '扶他到长椅', sub: '−3 分钟 · 50% 得到地点提示', time: 3, chance: 0.5, hint: true, successText: '他含糊地说了一个地点。', failText: '他睡着了，什么也没说。' }
+      ]
+    },
+    {
+      title: '遗失的票夹',
+      text: '长椅下有一只票夹，里面夹着几张旧票和一张名片。',
+      choices: [
+        { label: '交给站务员', sub: '−3 分钟 · 得到地点提示', time: 3, hint: true, successText: '站务员给你指了一个地方。' },
+        { label: '收下', sub: '得到旧车票', item: 'ticket', successText: '你把票夹塞进了口袋。' },
+        { label: '放回原处', sub: '不耗时间 · 什么也没有', time: 0, successText: '你把票夹放了回去。' }
+      ]
+    },
+    {
+      title: '卖艺老人',
+      text: '老人拉着一首很慢的曲子，站台上没有人停。',
+      choices: [
+        { label: '听完', sub: '−5 分钟 · 得到地点提示', time: 5, hint: true, successText: '老人收弓时，低声说了一个地点。' },
+        { label: '给一枚硬币', sub: '−1 分钟 · 50% 得到地点提示', time: 1, chance: 0.5, hint: true, successText: '他用琴弓指了指站台尽头。', failText: '他点了点头，没有开口。' },
+        { label: '走开', sub: '不耗时间', time: 0, successText: '你走开了。' }
+      ]
+    },
+    {
+      title: '查票',
+      text: '乘务员朝你走来，手里拿着打孔器。',
+      choices: [
+        { label: '配合', sub: '−1 分钟 · 50% 被收走旧车票', time: 1, consumeTicketChance: 0.5, successText: '他看了一眼，放你过去。', failText: '他收走了你的旧车票。' },
+        { label: '躲进下一节车厢', sub: '−3 分钟 · 安全', time: 3, successText: '你躲进了下一节车厢。' },
+        { label: '出示旧车票', sub: '安全 · 消耗旧车票', requiresTicket: true, consumeTicket: true, successText: '他点了点头，放你过去。' }
+      ]
+    },
+    {
+      title: '遗落的哨子',
+      text: '站台尽头，一枚黄铜哨子躺在地上，像是乘务员掉的。',
+      choices: [
+        { label: '捡起来', sub: '得到列车员哨', item: 'whistle', successText: '你捡起了哨子。' },
+        { label: '交给站务员', sub: '−3 分钟 · 得到地点提示', time: 3, hint: true, successText: '站务员给你指了一个地方。' },
+        { label: '踢到一边', sub: '不耗时间', time: 0, successText: '你走开了。' }
+      ]
+    }
+  ];
+
+  function maybeEvent() {
+    if (S.over || S.events >= 4) return;
+    if (S.time < S.eventCooldown) return;
+    if (S.eventRng() > 0.45) return;
+    const ev = EVENTS[Math.floor(S.eventRng() * EVENTS.length)];
+    S.events++;
+    S.eventCooldown = S.time + 15;
+    showEvent(ev);
+  }
+
+  function showEvent(ev) {
+    const html = '<p class="m-kicker">突发事件</p><h2>' + ev.title + '</h2><p>' + ev.text + '</p>' +
+      '<div class="choices">' + ev.choices.map((c, i) =>
+        '<button class="choice" data-choice="' + i + '">' + c.label + '<small>' + c.sub + '</small></button>'
+      ).join('') + '</div>';
+    openModal(html);
+    const seq = S.modalSeq;
+    $$('#modal [data-choice]').forEach(btn => {
+      btn.onclick = () => {
+        const c = ev.choices[Number(btn.dataset.choice)];
+        if (c.requiresTicket && !S.items.includes('ticket')) { toast('你没有旧车票。'); return; }
+        let ok = c.chance == null ? true : S.eventRng() < c.chance;
+        if (c.time) advance(c.time);
+        if (S.over) { render(); return; }
+        if (c.requiresTicket && c.consumeTicket) {
+          S.items = S.items.filter(x => x !== 'ticket');
+          log('出示旧车票', 'event');
+        }
+        if (c.consumeTicketChance && S.items.includes('ticket') && S.eventRng() < c.consumeTicketChance) {
+          S.items = S.items.filter(x => x !== 'ticket');
+          ok = false;
+        }
+        if (ok) {
+          if (c.hint) giveHint();
+          if (c.item) addItem(c.item);
+          log(c.successText || '你处理了这件事。', 'event');
+        } else {
+          if (c.failTime) advance(c.failTime);
+          if (S.over) { render(); return; }
+          log(c.failText || '事情没有按你想的发展。', 'event');
+        }
+        if (S.modalSeq === seq) closeModal();
+        render();
+      };
+    });
+  }
+
+  function giveHint() {
+    const missing = S.points.filter(p => !p.searched && p.content &&
+      (p.content.type === 'lock' || p.content.type === 'evidence' ||
+        (p.content.type === 'frag' && fragById(p.content.id) && fragById(p.content.id).correct)));
+    if (!missing.length) { log('没有更多地点提示。', 'clue'); return; }
+    const p = pick(S.eventRng, missing);
+    const text = '有人看见' + stationLabel(p.station) + '的' + p.name + '被动过。';
+    addHint(text);
+    log('地点提示：' + p.name, 'clue');
+  }
+
+  /* ---------- modal ---------- */
+  function openModal(html) {
+    const m = $('#modal');
+    if (S) S.modalSeq = (S.modalSeq || 0) + 1;
+    m.innerHTML = '<div class="modal-box">' + html + '</div>';
+    m.hidden = false;
+  }
+  function closeModal() {
+    const m = $('#modal');
+    m.hidden = true;
+    m.innerHTML = '';
+  }
+
+  function showStart() {
+    openModal('<p class="m-kicker">夜班稽查 · 21:00</p><h2>准点凶手</h2>' +
+      '<p>今晚 <b>23:30</b> 收车。<b>' + S.case.victim + '</b>没有下班。值班室只留下一件不该出现的东西。</p>' +
+      '<p class="lore">' + S.case.lore + '</p>' +
+      '<p>监控拍到一个人上了末班车，但看不清脸。你是夜班稽查，只有这一晚。</p>' +
+      '<p>补齐三条链：<b>身份</b>（他长什么样）、<b>机会</b>（他什么时候、坐哪班车）、<b>动机</b>（他为什么这么做），找到<b>锁</b>，再上车抓人。</p>' +
+      '<p>线索夹里可以查看每一件东西的说明。读心一局一次，只对关键 NPC，必真、无代价。</p>' +
+      '<div class="choices"><button class="choice" id="startBtn">开始</button></div>');
+    $('#startBtn').onclick = closeModal;
+  }
+
+  function openCase() { openInventory('frags'); }
+
+  function endGame(win, reason) {
+    if (S.over) return;
+    S.over = true;
+    const f = id => (S.fragDefs.find(x => x.id === id) || { text: '' }).text;
+    const route = S.legs.map(l =>
+      fmt(l.arr) + '　' + stationLabel(l.from) + ' → ' + stationLabel(l.to) + '（' + LINES[l.lid].name + '）'
+    ).join('<br>');
+    const lock = S.lockData;
+    const chain = '<p><b>身份：</b>' + f('c-who1') + ' ' + f('c-who2') + '</p>' +
+      '<p><b>机会：</b>' + f('c-when1') + ' ' + f('c-when2') + '</p>' +
+      '<p><b>动机：</b>' + f('c-why') + '</p>';
+    const lockHtml = '<p><b>锁：</b>' + lock.name + '。' + lock.desc +
+      (lock.lore ? '<br><span class="lore">' + lock.lore + '</span>' : '') + '</p>';
+    openModal('<p class="m-kicker">' + (win ? '结案' : '失败') + '</p><h2>' + (win ? '你抓住了他' : '案子没有结') + '</h2>' +
+      '<p>' + reason + '</p>' +
+      (win ? '' : '<p>真实链条：</p>') + chain + lockHtml +
+      '<p><b>他的特征：</b>' + S.culprit.desc + '</p>' +
+      '<p><b>真实路线：</b><br>' + route + '</p>' +
+      '<p>链条 ' + keyCount() + '/3　·　锁 ' + (S.lock ? '1/1' : '0/1') + '　·　时间 ' + fmt(S.time) + '</p>' +
+      '<div class="choices"><button class="choice" id="againBtn">换一局</button></div>');
+    $('#againBtn').onclick = () => {
+      closeModal();
+      const ns = Math.floor(Math.random() * 9000) + 1000;
+      try { history.replaceState(null, '', '?seed=' + ns); } catch (e) {}
+      newGame(ns);
+    };
+  }
+
+  /* ---------- wiring ---------- */
+  $('#scene').onclick = (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el || el.disabled) return;
+    const act = el.dataset.act;
+    const id = el.dataset.id;
+    if (act === 'search') doSearch(id);
+    else if (act === 'talk') doTalkStation(id);
+    else if (act === 'check') openCheckStation(id);
+    else if (act === 'talk-pax') doTalkPax(id);
+    else if (act === 'check-pax') openCheckPax(id);
+    else if (act === 'read') doRead(id);
+    else if (act === 'arrest') doArrest(id);
+    else if (act === 'car') moveCar(id);
+    else if (act === 'alight') alight();
+    else if (act === 'wait') waitTen();
+    else if (act === 'wait-next') waitNext();
+  };
+
+  $('#departures').onclick = (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    if (el.dataset.act === 'board') board(el.dataset.key);
+  };
+
+  $('#invBtn').onclick = () => openInventory('frags');
+  $('#restartBtn').onclick = () => {
+    const ns = Math.floor(Math.random() * 9000) + 1000;
+    try { history.replaceState(null, '', '?seed=' + ns); } catch (e) {}
+    newGame(ns);
+  };
+
+  /* ---------- boot ---------- */
+  window.__game = {
+    get S() { return S; },
+    search: doSearch,
+    board: board,
+    read: doRead,
+    arrest: doArrest,
+    render: render,
+    newGame: newGame
+  };
+  const params = new URLSearchParams(location.search);
+  const sp = parseInt(params.get('seed'), 10);
+  const initialSeed = Number.isFinite(sp) && sp > 0 ? sp : (Math.floor(Math.random() * 9000) + 1000);
+  try { history.replaceState(null, '', '?seed=' + initialSeed); } catch (e) {}
+  newGame(initialSeed);
+})();
+</script>
+</body>
+</html>
